@@ -19,6 +19,7 @@ type TaskContextProps = {
   setState: React.Dispatch<React.SetStateAction<TaskStateModel>>;
 };
 
+// Valor inicial de fallback (caso alguém use o contexto fora do provider)
 const initialContextValue = {
   state: initialState,
   setState: () => {},
@@ -31,15 +32,18 @@ type TaskContextProviderProps = {
 };
 
 export function TaskContextProvider({ children }: TaskContextProviderProps) {
+  // O Estado agora mora DENTRO do Provider!
   const [state, setState] = useState(initialState);
 
   return (
+    // Passamos tanto o state quanto a função de atualizar (setState) para todos os filhos
     <TaskContext.Provider value={{ state, setState }}>
       {children}
     </TaskContext.Provider>
   );
 }
 
+// Hook customizado para facilitar o uso
 export function useTaskContext() {
   return useContext(TaskContext);
 }
