@@ -1,99 +1,107 @@
-# 📊 Modelando o Estado Global da Aplicação
+# ⚓ Capturando Dados sem Renderizar: A Técnica do `useRef`
 
-Antes de sairmos criando múltiplos `useState` espalhados pelos componentes,
-precisamos dar um passo atrás e planejar: **como os dados da nossa aplicação vão
-se comportar?** Nossa aplicação Chronos Pomodoro possui um timer, um histórico
-de tarefas, configurações de tempo e controle de ciclos. Como todos esses dados
-precisam "conversar" entre si (o timer precisa saber a configuração de tempo, o
-histórico precisa saber quando o timer acaba), vamos centralizar tudo em um
-**Estado Global**.
+Vamos explorar os Uncontrolled Components e conhecer mais um Hook poderoso do
+React: o useRef!
 
-Nesta aula, vamos criar as tipagens (Models) que definirão o formato exato desse
-estado.
+Na aula passada, vimos que os **Inputs Controlados** (com `useState`) fazem o
+componente atualizar a tela a cada tecla digitada. Embora isso geralmente não
+seja um problema de performance, existe uma outra forma de capturar dados de um
+formulário: os **Inputs Não-Controlados** usando o Hook `useRef`.
 
 ---
 
-## 🏗️ 1. O Modelo da Tarefa (`TaskModel`)
+## 🧐 O que é o `useRef`?
 
-Primeiro, vamos definir como é o formato de uma única tarefa dentro do nosso
-histórico. Crie uma pasta `models` dentro de `src` e adicione o arquivo abaixo.
+O `useRef` é como uma "caixa forte" dentro do seu componente. Você pode guardar
+qualquer valor lá dentro (um número, um objeto, ou até mesmo um elemento HTML
+inteiro!).
 
-Optamos por usar `type` em vez de `interface` ou `class` pois nossos modelos não
-terão lógica embutida, serão apenas a representação visual dos dados.
+A grande sacada do `useRef` é dupla:
 
-**Arquivo:** `src/models/TaskModel.ts`
+1. O valor sobrevive entre as renderizações do componente.
+2. **Alterar o valor do `useRef` NÃO faz o componente ser renderizado
+   novamente.**
 
-```typescript
-import type { TaskStateModel } from './TaskStateModel';
+Sempre acessamos ou alteramos o valor salvo dentro de um ref através da
+propriedade `.current`.
 
-export type TaskModel = {
-  id: string; // Identificador único da tarefa
-  name: string; // Nome digitado no input
-  duration: number; // Duração em minutos
-  startDate: number; // Timestamp de quando começou (usamos number para facilitar o localStorage)
-  complete
-```
+---
 
-💡 **Por que usar `number` para as datas?** Ao invés de usar o objeto Date
-nativo do JavaScript, vamos salvar as datas usando `Date.now()`, que retorna um
-número (timestamp). Isso facilita imensamente na hora de salvar e recuperar do
-`localStorage`, pois números não perdem formatação ao serem transformados em
-JSON.
+## 🛠️ Implementando o Input Não-Controlado (`MainForm.tsx`)
 
-## 🌍 2. O Modelo do Estado Global (`TaskStateModel`)
+Em vez de guardarmos cada letra digitada, vamos usar o `useRef` para "agarrar" o
+elemento `<input>` real do HTML. Quando o usuário clicar em "Enviar", nós
+olhamos para esse input e pegamos o que está escrito lá dentro, de uma vez só!
 
-Agora, vamos definir o "Coração" da nossa aplicação: o objeto que vai guardar
-absolutamente tudo o que está acontecendo no momento.
-
-**Arquivo:** `src/models/TaskStateModel.ts`
+**Arquivo:** `src/components/MainForm/index.tsx`
 
 ```tsx
-import type { TaskModel } from './TaskModel';
+import { PlayCircleIcon } from 'lucide-react';
+import { Cycles } from '../Cycles';
+import { DefaultButton } from '../DefaultButton';
+import { DefaultInput } from '../DefaultInput';
+import { useTaskContext } from '../../contexts/useTaskContext';
 
-export type TaskStateModel = {
-  // 1. O Histórico: Um array contendo todas as tarefas já feitas ou em andamento
-  tasks: TaskModel[];
+// 1. Trocamos o import do useState pelo useRef
+import { useRef } from 'react';
 
-  // 2. Controle do Timer
-  secondsRemaining: number; // Quantos segundos faltam no cronômetro atual
-  formattedSecondsRemaining: string; // O texto pronto para a tela (ex: "25:00")
-  activeTask: TaskModel | null; // Qual tarefa está rodando AGORA (se houver)
+export function MainForm() {
+  const { setState } = useTaskContext();
 
-  // 3. Controle do Ciclo Pomodoro
-  currentCycle: number; // Vai de 1 a 8 (controla as bolinhas coloridas)
+  // 2. Criamos a referência e tipamos para o TypeScript saber que é um input
+  const taskNameInput = useRef<HTMLInputElement>(null);
 
-  // 4. Configurações do Usuário
-  config: {
-    workTime: number; // Tempo de foco (ex: 25)
-    shortBreakTime: number; // Descanso curto (ex: 5)
-    longBreakTime: number; // Descanso longo (ex: 15)
-  };
-};
+  function handleCreateNewTask(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    // 4. No momento do envio, acessamos o elemento HTML (.current) e pegamos o valor (.value)
+    console.log('DEU CERTO', taskNameInput.current?.value);
+  }
+
+  return (
+    <form onSubmit={handleCreateNewTask} className='form' action=''>
+      <div className='formRow'>
+        <DefaultInput
+          labelText='task'
+          id='meuInput'
+          type='text'
+          placeholder='Digite algo'
+          // 3. Removemos o 'value' e o 'onChange', e passamos a nossa ref para o input
+          ref={taskNameInput}
+        />
+      </div>
+
+      {/* ... (restante do código: Cycles, DefaultButton, etc) ... */}
+    </form>
+  );
+}
 ```
 
-## 🧠 3. Entendendo o `keyof` (TypeScript Avançado)
+## 🕵️‍♂️ Como a Mágica Acontece (Passo a Passo)
 
-No arquivo `TaskModel.ts`, nós definimos a propriedade `type` da seguinte forma:
+1. Quando o React desenha a tela, ele vê a propriedade ref={taskNameInput} no
+   seu <DefaultInput />.
+2. O React pega o elemento HTML real do input (<input type="text"...>) e guarda
+   dentro de taskNameInput.current.
+3. O usuário digita "Estudar React". O componente não é re-renderizado.
+4. O usuário clica em enviar.
+5. A função handleCreateNewTask é chamada.
+6. Nós lemos taskNameInput.current.value, que neste exato segundo contém a
+   string "Estudar React".
 
-```tsx
-type: keyof TaskStateModel['config'];
-```
+## ⚖️ Qual usar? `useState` (Controlado) ou `useRef` (Não-Controlado)?
 
-O que isso faz? Nós precisamos saber se a tarefa atual é de trabalho
-(`workTime`), descanso curto (`shortBreakTime`) ou descanso longo
-(`longBreakTime`). Repare que esses são exatamente os mesmos nomes das chaves do
-objeto config que acabamos de criar no TaskStateModel.
+Como regra geral no mercado de React:
 
-Ao usar o `keyof`, estamos dizendo ao TypeScript: "_O `type` da tarefa só pode
-ser uma string que seja idêntica ao nome de uma das chaves do `config`_".
+- **Use** `useState` **(Controlado) quando:** Você precisar reagir imediatamente
+  ao que o usuário digita. Exemplos: mostrar uma mensagem de erro enquanto ele
+  digita uma senha curta, formatar um CPF automaticamente (`123.4...`), ou
+  desabilitar um botão até que o campo esteja preenchido.
 
-Se amanhã adicionarmos uma nova configuração chamada `extraTime` dentro de
-config, o TypeScript automaticamente aceitará `extraTime` como um tipo de tarefa
-válido, sem precisarmos alterar dois arquivos diferentes. Isso evita repetição
-de código (o famoso princípio DRY - Don't Repeat Yourself)!
+**Use** `useRef` **(Não-Controlado) quando:** Você só se importa com o valor
+**no momento do envio** do formulário. É mais simples, escreve menos código e
+evita renderizações desnecessárias.
 
-## 🎯 Próximos Passos
-
-Agora que temos o "molde" perfeito de como nossos dados devem se comportar,
-estamos prontos para criar o Estado real da aplicação usando o `useState` e,
-futuramente, a Context API.
+Como no nosso Pomodoro nós só precisamos saber o nome da tarefa quando o usuário
+clica no "Play", a técnica do `useRef` cai como uma luva. E é com ela que
+seguiremos!
