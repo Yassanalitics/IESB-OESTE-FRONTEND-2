@@ -1,107 +1,144 @@
-# ⚓ Capturando Dados sem Renderizar: A Técnica do `useRef`
+# 🧠 Introdução ao `useReducer`: Simplificando Estados Complexos
 
-Vamos explorar os Uncontrolled Components e conhecer mais um Hook poderoso do
-React: o useRef!
+Nas últimas aulas, você deve ter notado que as nossas funções de iniciar e
+interromper tarefas ficaram gigantes. Toda vez que queríamos alterar o estado
+(`setState`), precisávamos nos preocupar em espalhar o estado anterior
+(`...prevState`), manter as outras propriedades intactas e fazer lógicas
+complexas de atualização de array.
 
-Na aula passada, vimos que os **Inputs Controlados** (com `useState`) fazem o
-componente atualizar a tela a cada tecla digitada. Embora isso geralmente não
-seja um problema de performance, existe uma outra forma de capturar dados de um
-formulário: os **Inputs Não-Controlados** usando o Hook `useRef`.
+Se precisássemos iniciar uma tarefa a partir de outro lugar da aplicação,
+teríamos que duplicar todo esse código! É para resolver exatamente esse problema
+de "estados complexos" que o React nos oferece o hook **`useReducer`**.
 
----
+Com o `useReducer`, o componente não precisa saber _como_ o estado é alterado.
+Ele apenas grita: **"Ei, inicie uma nova tarefa!"** (dispara uma ação). O
+Reducer, que é uma função centralizada, escuta essa ação, sabe exatamente o que
+fazer e devolve o novo estado pronto.
 
-## 🧐 O que é o `useRef`?
-
-O `useRef` é como uma "caixa forte" dentro do seu componente. Você pode guardar
-qualquer valor lá dentro (um número, um objeto, ou até mesmo um elemento HTML
-inteiro!).
-
-A grande sacada do `useRef` é dupla:
-
-1. O valor sobrevive entre as renderizações do componente.
-2. **Alterar o valor do `useRef` NÃO faz o componente ser renderizado
-   novamente.**
-
-Sempre acessamos ou alteramos o valor salvo dentro de um ref através da
-propriedade `.current`.
+Para você entender esse conceito sem fritar a cabeça com a complexidade do nosso
+Pomodoro, vamos dar um passo atrás e criar o Reducer mais simples do mundo: um
+contador.
 
 ---
 
-## 🛠️ Implementando o Input Não-Controlado (`MainForm.tsx`)
+## 🧹 1. Limpando o Terreno (O Efeito "Homens de Preto")
 
-Em vez de guardarmos cada letra digitada, vamos usar o `useRef` para "agarrar" o
-elemento `<input>` real do HTML. Quando o usuário clicar em "Enviar", nós
-olhamos para esse input e pegamos o que está escrito lá dentro, de uma vez só!
+Vamos temporariamente esconder a nossa aplicação para focar apenas no conceito.
+Abra o seu arquivo de Contexto. Comente o `useEffect` e troque o `{children}` do
+retorno por elementos de teste.
 
-**Arquivo:** `src/components/MainForm/index.tsx`
+**Arquivo:** `src/contexts/TaskContext/index.tsx`
 
 ```tsx
-import { PlayCircleIcon } from 'lucide-react';
-import { Cycles } from '../Cycles';
-import { DefaultButton } from '../DefaultButton';
-import { DefaultInput } from '../DefaultInput';
-import { useTaskContext } from '../../contexts/useTaskContext';
+// Comente o useEffect por enquanto
+// useEffect(() => {
+//   console.log(state);
+// }, [state]);
 
-// 1. Trocamos o import do useState pelo useRef
-import { useRef } from 'react';
-
-export function MainForm() {
-  const { setState } = useTaskContext();
-
-  // 2. Criamos a referência e tipamos para o TypeScript saber que é um input
-  const taskNameInput = useRef<HTMLInputElement>(null);
-
-  function handleCreateNewTask(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    // 4. No momento do envio, acessamos o elemento HTML (.current) e pegamos o valor (.value)
-    console.log('DEU CERTO', taskNameInput.current?.value);
-  }
-
-  return (
-    <form onSubmit={handleCreateNewTask} className='form' action=''>
-      <div className='formRow'>
-        <DefaultInput
-          labelText='task'
-          id='meuInput'
-          type='text'
-          placeholder='Digite algo'
-          // 3. Removemos o 'value' e o 'onChange', e passamos a nossa ref para o input
-          ref={taskNameInput}
-        />
-      </div>
-
-      {/* ... (restante do código: Cycles, DefaultButton, etc) ... */}
-    </form>
-  );
-}
+return (
+  <TaskContext.Provider value={{ state, setState }}>
+    {/* Esconda o {children} e coloque um H1 para testarmos */}
+    <h1>Testando...</h1>
+  </TaskContext.Provider>
+);
 ```
 
-## 🕵️‍♂️ Como a Mágica Acontece (Passo a Passo)
+Se você olhar o navegador agora, a aplicação sumiu e você só verá o
+"Testando...". Perfeito!
 
-1. Quando o React desenha a tela, ele vê a propriedade ref={taskNameInput} no
-   seu <DefaultInput />.
-2. O React pega o elemento HTML real do input (<input type="text"...>) e guarda
-   dentro de taskNameInput.current.
-3. O usuário digita "Estudar React". O componente não é re-renderizado.
-4. O usuário clica em enviar.
-5. A função handleCreateNewTask é chamada.
-6. Nós lemos taskNameInput.current.value, que neste exato segundo contém a
-   string "Estudar React".
+## ⚙️ 2. A Estrutura Básica do `useReducer`
 
-## ⚖️ Qual usar? `useState` (Controlado) ou `useRef` (Não-Controlado)?
+O `useReducer` funciona de forma muito parecida com o `useState`. Ele recebe
+dois parâmetros:
 
-Como regra geral no mercado de React:
+1. Uma **função Reducer** (que recebe o estado atual e a ação disparada).
+2. O **estado inicial** (no nosso caso, o número `0`).
 
-- **Use** `useState` **(Controlado) quando:** Você precisar reagir imediatamente
-  ao que o usuário digita. Exemplos: mostrar uma mensagem de erro enquanto ele
-  digita uma senha curta, formatar um CPF automaticamente (`123.4...`), ou
-  desabilitar um botão até que o campo esteja preenchido.
+Ele nos devolve duas coisas (assim como o `useState`):
 
-**Use** `useRef` **(Não-Controlado) quando:** Você só se importa com o valor
-**no momento do envio** do formulário. É mais simples, escreve menos código e
-evita renderizações desnecessárias.
+1. A variável com o valor do **estado** (chamaremos de `numero`).
+2. Uma função para **disparar ações**, que convencionalmente chamamos de
+   `dispatch`.
 
-Como no nosso Pomodoro nós só precisamos saber o nome da tarefa quando o usuário
-clica no "Play", a técnica do `useRef` cai como uma luva. E é com ela que
-seguiremos!
+Vamos importar o `useReducer` do React e criar a nossa estrutura:
+
+```tsx
+import { useReducer, useState } from 'react';
+// ... outras importações ...
+
+export function TaskContextProvider({ children }: TaskContextProviderProps) {
+  const [state, setState] = useState(initialTaskState);
+
+  // 1. Criando o nosso reducer simples
+  const [numero, dispatch] = useReducer((state, action) => {
+
+    // Regra de Ouro: O reducer SEMPRE precisa retornar um estado (seja ele novo ou o atual)
+    return state;
+
+  }, 0);
+
+// ...
+```
+
+## 🎯 3. Disparando Ações e o `switch/case`
+
+Como alteramos esse número? Usamos a função `dispatch` passando o nome da ação
+que queremos que aconteça. Normalmente, passamos strings em letras maiúsculas
+(como `'INCREMENT'`).
+
+Dentro da função reducer, usamos um `switch` para checar qual ação foi disparada
+(o parâmetro `action`) e, com base nisso, retornamos a matemática correta.
+
+Atualize o seu código para incluir a lógica do `switch` e os botões na tela:
+
+```tsx
+const [numero, dispatch] = useReducer((state, action) => {
+  console.log('Estado atual:', state, 'Ação disparada:', action);
+
+  // Avalia qual ação foi disparada
+  switch (action) {
+    case 'INCREMENT':
+      return state + 1; // Se for incrementar, devolve o estado + 1
+    case 'DECREMENT':
+      return state - 1; // Se for decrementar, devolve o estado - 1
+    case 'INITIAL_STATE':
+      return 0; // Se for zerar, devolve 0 diretamente
+  }
+
+  // Fallback: se dispararem uma ação que não existe, devolve o estado como estava.
+  return state;
+}, 0);
+
+return (
+  <TaskContext.Provider value={{ state, setState }}>
+    <h1>O número é: {numero}</h1>
+
+    {/* Botões que disparam (dispatch) as ações para o nosso reducer */}
+    <button onClick={() => dispatch('INCREMENT')}>Incrementar</button>
+    <button onClick={() => dispatch('DECREMENT')}>Decrementar</button>
+    <button onClick={() => dispatch('INITIAL_STATE')}>ZERAR</button>
+  </TaskContext.Provider>
+);
+```
+
+## ✅ 4. Testando o Comportamento
+
+Vá para o navegador, abra o seu `Console (F12)` e clique nos botões!
+
+- Ao clicar em **Incrementar**, o `dispatch('INCREMENT')` manda a mensagem para
+  o Reducer. O Reducer vê o `case 'INCREMENT'`, soma 1 ao estado e atualiza a
+  tela.
+- Ao clicar em **ZERAR**, o `dispatch` manda a mensagem `'INITIAL_STATE'`. O
+  Reducer entende a regra e altera o estado para 0, não importando o quão alto o
+  número estava antes.
+
+Toda a lógica matemática ficou presa dentro do Reducer. Os botões não fazem
+ideia de como a conta é feita, eles apenas dão a ordem!
+
+**🔮 Próximos Passos** Isso foi muito fácil porque lidamos com um simples número
+e uma string de ação. Mas no mundo real, nosso estado é um objeto gigante (com
+arrays e tarefas) e nossas ações precisam carregar dados (ex: os dados da tarefa
+digitada no input).
+
+Na próxima aula, vamos evoluir esse conceito para trabalhar com **Objetos e
+Payloads**, deixando tudo pronto para refatorar o nosso Pomodoro de verdade!
