@@ -1,40 +1,52 @@
-import { useReducer, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 import { initialTaskState } from './initialTaskState';
+import { taskReducer } from './TaskReducer';
 import { TaskContext } from './TaskContext';
-
+import { TimerWorkerManager } from '../../workers/TimerWorkerManager';
+import { TaskActionTypes } from './TaskActions';
 
 type TaskContextProviderProps = {
   children: React.ReactNode;
 };
 
 export function TaskContextProvider({ children }: TaskContextProviderProps) {
-  const [state, setState] = useState(initialTaskState);
+  const [state, dispatch] = useReducer(taskReducer, initialTaskState);
 
-  const [numero, dispatch] = useReducer((state, action) => {
-    console.log(state, action);
+  const worker = TimerWorkerManager.getInstance();
 
-    switch (action) {
-      case 'INCREMENT':
-        return state + 1;
-      case 'DECREMENT':
-        return state - 1;
-      case 'INITIAL_STATE':
-        return 0;
+  useEffect(() => {
+    worker.onmessage(e => {
+      const countDownSeconds = e.data;
+
+      if (countDownSeconds <= 0) {
+        dispatch({
+          type: TaskActionTypes.COMPLETE_TASK,
+        });
+        worker.terminate();
+      } else {
+        dispatch({
+          type: TaskActionTypes.COUNT_DOWN,
+          payload: { secondsRemaining: countDownSeconds },
+        });
+      }
+    });
+  }, [worker]);
+
+  useEffect(() => {
+    console.log(state);
+
+    if (!state.activeTask) {
+      console.log('Worker terminado por falta de activeTask');
+      worker.terminate();
+      return;
     }
 
-    return state; // estado atual (não altera)
-  }, 0);
-
-  // useEffect(() => {
-  //   console.log(state);
-  // }, [state]);
+    worker.postMessage(state);
+  }, [worker, state]);
 
   return (
-    <TaskContext.Provider value={{ state, setState }}>
-      <h1>O número é: {numero}</h1>
-      <button onClick={() => dispatch('INCREMENT')}>Incrementar</button>
-      <button onClick={() => dispatch('DECREMENT')}>Decrementar</button>
-      <button onClick={() => dispatch('INITIAL_STATE')}>ZERAR</button>
+    <TaskContext.Provider value={{ state, dispatch }}>
+      {children}
     </TaskContext.Provider>
   );
 }

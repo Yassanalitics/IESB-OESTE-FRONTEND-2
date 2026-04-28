@@ -9,12 +9,12 @@
   --gray-800: #181f2e;
   --gray-900: #0a0f1a;
 
-  --primary-light: #4de7b7;
-  --primary: #0da170;
-  --primary-dark: #065f46;
+  --primary-light: #4da6ff;
+  --primary: #007bff;
+  --primary-dark: #0056b3;
 
-  --link-color: #10b981;
-  --link-hover: #0b8a60;
+  --link-color: #007bff;
+  --link-hover: #0056b3;
 
   --success: #22c55e;
   --warning: #eab308;
@@ -35,7 +35,6 @@
   --disabled: #555f7d;
   --text-disabled: #aab3cc;
 }
-
 :root[data-theme='light'] {
   --gray-100: #0a0f1a;
   --gray-200: #181f2e;
