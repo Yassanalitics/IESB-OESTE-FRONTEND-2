@@ -88,7 +88,7 @@ export default function Login() {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <div className={styles.cardTitle}>Pomodoro IESB</div>
+        <div className={styles.cardTitle}>Chronos Pomodoro</div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.inputGroup}>
