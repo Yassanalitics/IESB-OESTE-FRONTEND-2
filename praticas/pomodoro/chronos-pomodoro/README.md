@@ -38,7 +38,7 @@ Com isso, sempre que a página é aberta, o título da aba é atualizado para re
 - 404: título da aba exibe `Página não encontrada - Chronos Pomodoro`.
 
 ---
-
+teste1
 ## Código-fonte dos arquivos modificados nesta branch
 
 ### `src/pages/Home/index.tsx`
