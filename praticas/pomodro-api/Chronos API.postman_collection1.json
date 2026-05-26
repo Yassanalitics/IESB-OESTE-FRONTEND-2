@@ -44,7 +44,13 @@
       "name": "Atualizar Settings",
       "request": {
         "method": "PUT",
-        "header": [],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\r\n  \"workTime\": 30,\r\n  \"shortBreakTime\": 10,\r\n  \"longBreakTime\": 20\r\n}",
