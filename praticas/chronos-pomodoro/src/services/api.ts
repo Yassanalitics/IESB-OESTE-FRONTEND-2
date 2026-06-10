@@ -1,80 +1,88 @@
-import type { TaskModel } from "../models/TaskModel";
-import type { TaskStateModel } from "../models/TaskStateModel";
+// Centraliza todas as chamadas à pomodoro-api
+const BASE_URL = 'http://localhost:3333';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3333";
-
-type ApiTask = Omit<
-  TaskModel,
-  "startDate" | "completeDate" | "interruptDate"
-> & {
-  startDate: string | number;
-  completeDate: string | number | null;
-  interruptDate: string | number | null;
-};
-
-function normalizeTask(task: ApiTask): TaskModel {
-  return {
-    ...task,
-    startDate: Number(task.startDate),
-    completeDate: task.completeDate === null ? null : Number(task.completeDate),
-    interruptDate:
-      task.interruptDate === null ? null : Number(task.interruptDate),
-  };
+// Injeta o Bearer token em todas as requisições autenticadas
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('authToken');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+      ...(options?.headers ?? {}),
+    },
     ...options,
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `API error: ${response.status}`);
+    const body = await response.json().catch(() => ({}));
+    throw new Error((body as { message?: string }).message ?? `Erro ${response.status}`);
   }
 
+  // 204 No Content não tem body
   if (response.status === 204) return undefined as T;
 
-  return (await response.json()) as T;
+  return response.json() as Promise<T>;
 }
 
-export async function getSettings() {
-  return request<TaskStateModel["config"]>("/settings");
-}
+// ─── Settings ──────────────────────────────────────────────────────────────
 
-export async function updateSettings(config: TaskStateModel["config"]) {
-  return request<TaskStateModel["config"]>("/settings", {
-    method: "PUT",
-    body: JSON.stringify(config),
-  });
-}
+export type ApiSettings = {
+  id: number;
+  userId: number;
+  workTime: number;
+  shortBreakTime: number;
+  longBreakTime: number;
+  updatedAt: string;
+};
 
-export async function getTasks() {
-  const tasks = await request<ApiTask[]>("/tasks");
-  return tasks.map(normalizeTask);
-}
+export const settingsApi = {
+  get: () => request<ApiSettings>('/settings'),
 
-export async function createTask(task: TaskModel) {
-  return request<ApiTask>("/tasks", {
-    method: "POST",
-    body: JSON.stringify(task),
-  });
-}
+  put: (data: Omit<ApiSettings, 'id' | 'userId' | 'updatedAt'>) =>
+    request<ApiSettings>('/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
 
-export async function completeTask(taskId: string, completeDate: number) {
-  return request<ApiTask>(`/tasks/${taskId}/complete`, {
-    method: "PATCH",
-    body: JSON.stringify({ completeDate }),
-  });
-}
+// ─── Tasks ─────────────────────────────────────────────────────────────────
 
-export async function interruptTask(taskId: string, interruptDate: number) {
-  return request<ApiTask>(`/tasks/${taskId}/interrupt`, {
-    method: "PATCH",
-    body: JSON.stringify({ interruptDate }),
-  });
-}
+export type ApiTask = {
+  id: string;
+  userId: number;
+  name: string;
+  duration: number;
+  type: string;
+  startDate: number;
+  completeDate: number | null;
+  interruptDate: number | null;
+  createdAt: string;
+};
 
-export async function clearTasks() {
-  return request<void>("/tasks", { method: "DELETE" });
-}
+export const tasksApi = {
+  list: () => request<ApiTask[]>('/tasks'),
+
+  create: (data: Omit<ApiTask, 'userId' | 'createdAt'>) =>
+    request<ApiTask>('/tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  complete: (id: string, completeDate: number) =>
+    request<ApiTask>(`/tasks/${id}/complete`, {
+      method: 'PATCH',
+      body: JSON.stringify({ completeDate }),
+    }),
+
+  interrupt: (id: string, interruptDate: number) =>
+    request<ApiTask>(`/tasks/${id}/interrupt`, {
+      method: 'PATCH',
+      body: JSON.stringify({ interruptDate }),
+    }),
+
+  deleteAll: () => request<void>('/tasks', { method: 'DELETE' }),
+};

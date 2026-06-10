@@ -1,8 +1,8 @@
-import type { TaskStateModel } from "../../models/TaskStateModel";
-import { formatSecondsToMinutes } from "../../utils/formatSecondsToMinutes";
-import { getNextCycle } from "../../utils/getNextCycle";
-import { initialTaskState } from "./initialTaskState";
-import { TaskActionTypes, type TaskActionModel } from "./taskActions";
+import type { TaskStateModel } from '../../models/TaskStateModel';
+import { formatSecondsToMinutes } from '../../utils/formatSecondsToMinutes';
+import { getNextCycle } from '../../utils/getNextCycle';
+import { initialTaskState } from './initialTaskState';
+import { TaskActionTypes, type TaskActionModel } from './taskActions';
 
 export function taskReducer(
   state: TaskStateModel,
@@ -13,7 +13,6 @@ export function taskReducer(
       const newTask = action.payload;
       const nextCycle = getNextCycle(state.currentCycle);
       const secondsRemaining = newTask.duration * 60;
-
       return {
         ...state,
         activeTask: newTask,
@@ -28,8 +27,8 @@ export function taskReducer(
         ...state,
         activeTask: null,
         secondsRemaining: 0,
-        formattedSecondsRemaining: "00:00",
-        tasks: state.tasks.map((task) => {
+        formattedSecondsRemaining: '00:00',
+        tasks: state.tasks.map(task => {
           if (state.activeTask && state.activeTask.id === task.id) {
             return { ...task, interruptDate: Date.now() };
           }
@@ -42,8 +41,8 @@ export function taskReducer(
         ...state,
         activeTask: null,
         secondsRemaining: 0,
-        formattedSecondsRemaining: "00:00",
-        tasks: state.tasks.map((task) => {
+        formattedSecondsRemaining: '00:00',
+        tasks: state.tasks.map(task => {
           if (state.activeTask && state.activeTask.id === task.id) {
             return { ...task, completeDate: Date.now() };
           }
@@ -53,26 +52,6 @@ export function taskReducer(
     }
     case TaskActionTypes.RESET_STATE: {
       return { ...initialTaskState };
-    }
-    case TaskActionTypes.CLEAR_TASKS: {
-      return {
-        ...state,
-        tasks: [],
-        activeTask: null,
-        secondsRemaining: 0,
-        formattedSecondsRemaining: "00:00",
-        currentCycle: 0,
-      };
-    }
-    case TaskActionTypes.HYDRATE_TASKS: {
-      return {
-        ...state,
-        tasks: action.payload,
-        activeTask: null,
-        secondsRemaining: 0,
-        formattedSecondsRemaining: "00:00",
-        currentCycle: action.payload.length,
-      };
     }
     case TaskActionTypes.COUNT_DOWN: {
       return {
@@ -86,8 +65,10 @@ export function taskReducer(
     case TaskActionTypes.CHANGE_SETTINGS: {
       return { ...state, config: { ...action.payload } };
     }
+    case TaskActionTypes.LOAD_TASKS: {
+      return { ...state, tasks: action.payload };
+    }
   }
 
-  // Sempre deve retornar o estado
   return state;
 }

@@ -4,17 +4,20 @@ import {
   MoonIcon,
   SettingsIcon,
   SunIcon,
+  LogOutIcon,
 } from 'lucide-react';
 import styles from './styles.module.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { RouterLink } from '../RouterLink';
+import { AuthContext } from '../../contexts/AuthContext/AuthContext';
 
 type AvailableThemes = 'dark' | 'light';
 
 export function Menu() {
+  const { logout, user } = useContext(AuthContext);
+
   const [theme, setTheme] = useState<AvailableThemes>(() => {
-    const storageTheme =
-      (localStorage.getItem('theme') as AvailableThemes) || 'dark';
+    const storageTheme = (localStorage.getItem('theme') as AvailableThemes) || 'dark';
     return storageTheme;
   });
 
@@ -23,15 +26,14 @@ export function Menu() {
     light: <MoonIcon />,
   };
 
-  function handleThemeChange(
-    event: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
-  ) {
+  function handleThemeChange(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
     event.preventDefault();
+    setTheme(prevTheme => (prevTheme === 'dark' ? 'light' : 'dark'));
+  }
 
-    setTheme(prevTheme => {
-      const nextTheme = prevTheme === 'dark' ? 'light' : 'dark';
-      return nextTheme;
-    });
+  function handleLogout(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    event.preventDefault();
+    logout();
   }
 
   useEffect(() => {
@@ -76,6 +78,16 @@ export function Menu() {
         onClick={handleThemeChange}
       >
         {nextThemeIcon[theme]}
+      </a>
+
+      <a
+        className={styles.menuLink}
+        href='#'
+        aria-label={`Sair (${user?.name ?? 'usuário'})`}
+        title={`Sair (${user?.name ?? 'usuário'})`}
+        onClick={handleLogout}
+      >
+        <LogOutIcon />
       </a>
     </nav>
   );

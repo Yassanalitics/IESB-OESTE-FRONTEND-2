@@ -82,15 +82,15 @@ export function AboutPomodoro() {
             </li>
           </ul>
 
-          <h3>Visualização dos ciclos</h3>
+          <h3>🍅 Visualização dos ciclos</h3>
           <p>
             Logo abaixo do cronômetro, você verá bolinhas coloridas
             representando os ciclos:
           </p>
           <ul>
-            <li>✨ Amarelo: Ciclo de foco.</li>
-            <li>🌸 Rosa: Descanso curto.</li>
-            <li>🪻 Roxo profundo: Descanso longo.</li>
+            <li>🟡 Amarelo: Ciclo de trabalho (foco).</li>
+            <li>🟢 Verde: Descanso curto.</li>
+            <li>🔵 Azul: Descanso longo (aparece a cada 8 ciclos).</li>
           </ul>
 
           <p>
@@ -118,11 +118,11 @@ export function AboutPomodoro() {
           <p>
             <strong>Pronto pra focar?</strong> Bora lá{' '}
             <RouterLink href='/'>voltar para a página inicial</RouterLink> e
-            iniciar seus Pomodoros! 
+            iniciar seus Pomodoros! 🍅🚀
           </p>
 
           <p>
-            <em>"Foco total, sem pressa, sem pausa, só vai!"</em> 
+            <em>"Foco total, sem pressa, sem pausa, só vai!"</em> 💪🧘‍♂️
           </p>
         </GenericHtml>
       </Container>
