@@ -97,6 +97,11 @@
   opacity: 0.95;
 }
 
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .actions {
   display: flex;
   flex-direction: column;
@@ -126,6 +131,7 @@
   border-radius: 12px;
   font-size: 0.875rem;
   font-weight: bold;
+  margin-top: 1rem;
 }
 
 .success {
@@ -172,4 +178,39 @@
 
 .togglePasswordBtn:hover {
   color: #c77dff;
+}
+
+.description {
+  color: #d0b3f7;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.devBox {
+  margin-top: 1.5rem;
+  background-color: #2a1745;
+  border: 1px dashed #c77dff;
+  border-radius: 14px;
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.825rem;
+  color: #d0b3f7;
+}
+
+.devBox strong {
+  color: #ff4fa3;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.devToken {
+  display: block;
+  word-break: break-all;
+  background-color: #140b1f;
+  padding: 0.5rem;
+  border-radius: 8px;
+  color: #74c69d;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
 }

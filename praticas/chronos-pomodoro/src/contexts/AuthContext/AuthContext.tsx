@@ -1,55 +1,151 @@
-import React, { createContext, useReducer, type ReactNode } from 'react';
+import React, { createContext, useReducer, useEffect, type ReactNode } from 'react';
+
+export interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+}
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: string | null;
+  user: AuthUser | null;
+  token: string | null;
+  isLoading: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  login: (username: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  register: (name: string, email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => void;
+  forgotPassword: (email: string) => Promise<{ ok: boolean; message?: string; devToken?: string }>;
+  resetPassword: (token: string, newPassword: string) => Promise<{ ok: boolean; message?: string }>;
 }
 
-type AuthAction = { type: 'LOGIN'; payload: string } | { type: 'LOGOUT' };
+type AuthAction =
+  | { type: 'LOGIN'; payload: { user: AuthUser; token: string } }
+  | { type: 'LOGOUT' }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'RESTORE'; payload: { user: AuthUser; token: string } };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = createContext<AuthContextType>(
-  {} as AuthContextType,
-);
+export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
+  token: null,
+  isLoading: false,
 };
 
-function authReducer(state: AuthState, action: AuthAction) {
+function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case 'LOGIN':
-      return { isAuthenticated: true, user: action.payload };
+    case 'RESTORE':
+      return {
+        isAuthenticated: true,
+        user: action.payload.user,
+        token: action.payload.token,
+        isLoading: false,
+      };
     case 'LOGOUT':
-      return { isAuthenticated: false, user: null };
+      return { isAuthenticated: false, user: null, token: null, isLoading: false };
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
     default:
       return state;
   }
 }
 
+const BASE_URL = 'http://localhost:3333';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  const login = (username: string, password: string) => {
-    if (username === 'admin' && password === '1234') {
-      dispatch({ type: 'LOGIN', payload: username });
-      return true;
+  useEffect(() => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
+    dispatch({ type: 'SET_LOADING', payload: false });
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { ok: false, message: data.message ?? 'Erro ao fazer login.' };
+      }
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('authUser', JSON.stringify(data.user));
+      dispatch({ type: 'LOGIN', payload: { user: data.user, token: data.token } });
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Não foi possível conectar ao servidor.' };
     }
-    return false;
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { ok: false, message: data.message ?? 'Erro ao criar conta.' };
+      }
+      return { ok: true, message: data.message };
+    } catch {
+      return { ok: false, message: 'Não foi possível conectar ao servidor.' };
+    }
   };
 
   const logout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
     dispatch({ type: 'LOGOUT' });
   };
 
+  const forgotPassword = async (email: string) => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { ok: false, message: data.message ?? 'Erro ao solicitar redefinição.' };
+      }
+      return { ok: true, message: data.message, devToken: data.devToken };
+    } catch {
+      return { ok: false, message: 'Não foi possível conectar ao servidor.' };
+    }
+  };
+
+  const resetPassword = async (token: string, newPassword: string) => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { ok: false, message: data.message ?? 'Erro ao redefinir senha.' };
+      }
+      return { ok: true, message: data.message };
+    } catch {
+      return { ok: false, message: 'Não foi possível conectar ao servidor.' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

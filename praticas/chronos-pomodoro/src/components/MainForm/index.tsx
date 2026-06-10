@@ -1,21 +1,21 @@
-import { PlayCircleIcon, StopCircleIcon } from "lucide-react";
-import { Cycles } from "../Cycles";
-import { DefaultButton } from "../DefaultButton";
-import { DefaultInput } from "../DefaultInput";
-import { useRef } from "react";
-import type { TaskModel } from "../../models/TaskModel";
-import { useTaskContext } from "../../contexts/TaskContext/useTaskContext";
-import { getNextCycle } from "../../utils/getNextCycle";
-import { getNextCycleType } from "../../utils/getNextCycleType";
-import { TaskActionTypes } from "../../contexts/TaskContext/taskActions";
-import { Tips } from "../Tips";
-import { showMessage } from "../../adapters/showMessage";
-import { createTask, interruptTask } from "../../services/api";
+import { PlayCircleIcon, StopCircleIcon } from 'lucide-react';
+import { Cycles } from '../Cycles';
+import { DefaultButton } from '../DefaultButton';
+import { DefaultInput } from '../DefaultInput';
+import { useRef } from 'react';
+import type { TaskModel } from '../../models/TaskModel';
+import { useTaskContext } from '../../contexts/TaskContext/useTaskContext';
+import { getNextCycle } from '../../utils/getNextCycle';
+import { getNextCycleType } from '../../utils/getNextCycleType';
+import { TaskActionTypes } from '../../contexts/TaskContext/taskActions';
+import { Tips } from '../Tips';
+import { showMessage } from '../../adapters/showMessage';
+import { tasksApi } from '../../services/api';
 
 export function MainForm() {
   const { state, dispatch } = useTaskContext();
   const taskNameInput = useRef<HTMLInputElement>(null);
-  const lastTaskName = state.tasks[state.tasks.length - 1]?.name || "";
+  const lastTaskName = state.tasks[state.tasks.length - 1]?.name || '';
 
   async function handleCreateNewTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,14 +24,13 @@ export function MainForm() {
     if (taskNameInput.current === null) return;
 
     const taskName = taskNameInput.current.value.trim();
-
     if (!taskName) {
-      showMessage.warn("Digite o nome da tarefa");
+      showMessage.warn('Digite o nome da tarefa');
       return;
     }
 
     const nextCycle = getNextCycle(state.currentCycle);
-    const nextCyleType = getNextCycleType(nextCycle);
+    const nextCycleType = getNextCycleType(nextCycle);
 
     const newTask: TaskModel = {
       id: Date.now().toString(),
@@ -39,81 +38,81 @@ export function MainForm() {
       startDate: Date.now(),
       completeDate: null,
       interruptDate: null,
-      duration: state.config[nextCyleType],
-      type: nextCyleType,
+      duration: state.config[nextCycleType],
+      type: nextCycleType,
     };
 
-    dispatch({ type: TaskActionTypes.START_TASK, payload: newTask });
-    showMessage.success("Tarefa iniciada");
+    // Persiste na API (não bloqueia a UI se a API falhar)
+    tasksApi.create({
+      id: newTask.id,
+      name: newTask.name,
+      duration: newTask.duration,
+      type: newTask.type,
+      startDate: newTask.startDate,
+      completeDate: null,
+      interruptDate: null,
+    }).catch(() => {
+      showMessage.warn('API offline — tarefa salva localmente');
+    });
 
-    try {
-      await createTask(newTask);
-    } catch {
-      showMessage.error("A tarefa iniciou, mas não foi persistida na API");
-    }
+    dispatch({ type: TaskActionTypes.START_TASK, payload: newTask });
+    showMessage.success('Tarefa iniciada');
   }
 
-  async function handleInterruptTask() {
+  function handleInterruptTask() {
     showMessage.dismiss();
-    showMessage.error("Tarefa interrompida!");
-    const taskId = state.activeTask?.id;
-    const interruptDate = Date.now();
-    dispatch({ type: TaskActionTypes.INTERRUPT_TASK });
+    showMessage.error('Tarefa interrompida!');
 
-    if (!taskId) return;
-
-    try {
-      await interruptTask(taskId, interruptDate);
-    } catch {
-      showMessage.error(
-        "A tarefa foi interrompida localmente, mas a API falhou",
-      );
+    // Persiste interrupt na API
+    if (state.activeTask) {
+      tasksApi.interrupt(state.activeTask.id, Date.now()).catch(() => {});
     }
+
+    dispatch({ type: TaskActionTypes.INTERRUPT_TASK });
   }
 
   return (
-    <form onSubmit={handleCreateNewTask} className="form" action="">
-      <div className="formRow">
+    <form onSubmit={handleCreateNewTask} className='form' action=''>
+      <div className='formRow'>
         <DefaultInput
-          labelText="task"
-          id="meuInput"
-          type="text"
-          placeholder="Digite algo"
+          labelText='task'
+          id='meuInput'
+          type='text'
+          placeholder='Digite algo'
           ref={taskNameInput}
           disabled={!!state.activeTask}
           defaultValue={lastTaskName}
         />
       </div>
 
-      <div className="formRow">
+      <div className='formRow'>
         <Tips />
       </div>
 
       {state.currentCycle > 0 && (
-        <div className="formRow">
+        <div className='formRow'>
           <Cycles />
         </div>
       )}
 
-      <div className="formRow">
+      <div className='formRow'>
         {!state.activeTask && (
           <DefaultButton
-            aria-label="Iniciar nova tarefa"
-            title="Iniciar nova tarefa"
-            type="submit"
+            aria-label='Iniciar nova tarefa'
+            title='Iniciar nova tarefa'
+            type='submit'
             icon={<PlayCircleIcon />}
           />
         )}
-
         {!!state.activeTask && (
           <DefaultButton
-            aria-label="Interromper tarefa atual"
-            title="Interromper tarefa atual"
-            type="button"
-            color="red"
+            aria-label='Interromper tarefa atual'
+            title='Interromper tarefa atual'
+            type='button'
+            color='red'
             icon={<StopCircleIcon />}
             onClick={handleInterruptTask}
-            key="botao_button"
+            key='botao_button'
           />
         )}
       </div>
